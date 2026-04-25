@@ -46,14 +46,14 @@ export class LogTailer implements ILogProvider {
       ([id, info]) => ({
         id,
         task: info.task,
-        elapsedMs: now - info.startTime,
+        elapsedMs: Math.max(0, now - info.startTime),
         startTime: info.startTime,
       })
     );
     return {
       ...this.state,
-      uptimeMs: this.firstEventTime ? now - this.firstEventTime : 0,
-      idleMs: this.lastEventTime ? now - this.lastEventTime : 0,
+      uptimeMs: this.firstEventTime ? Math.max(0, now - this.firstEventTime) : 0,
+      idleMs: this.lastEventTime ? Math.max(0, now - this.lastEventTime) : 0,
       activeAgents,
     };
   }
