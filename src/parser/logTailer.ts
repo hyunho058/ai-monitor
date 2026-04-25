@@ -188,12 +188,16 @@ export class LogTailer implements ILogProvider {
       if (model) this.state.model = model;
     }
 
-    // Usage (contextUsed = latest input_tokens; totalTokens = cumulative sum)
+    // Usage: contextUsed = total context visible to model (includes cache hits)
+    // totalTokens = cumulative billed tokens across all turns
     const usage = extractUsage(event);
     if (usage) {
       const inp = typeof usage.input_tokens === 'number' ? usage.input_tokens : 0;
       const out = typeof usage.output_tokens === 'number' ? usage.output_tokens : 0;
-      if (inp > 0) this.state.contextUsed = inp;
+      const cacheRead = typeof usage.cache_read_input_tokens === 'number' ? usage.cache_read_input_tokens : 0;
+      const cacheCreate = typeof usage.cache_creation_input_tokens === 'number' ? usage.cache_creation_input_tokens : 0;
+      const totalContext = inp + cacheRead + cacheCreate;
+      if (totalContext > 0) this.state.contextUsed = totalContext;
       this.state.totalTokens += inp + out;
     }
 
