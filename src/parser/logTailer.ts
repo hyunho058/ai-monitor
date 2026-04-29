@@ -15,7 +15,8 @@ export class LogTailer implements ILogProvider {
   private pollTimer: ReturnType<typeof setInterval> | null = null;
   private firstEventTime: number | null = null;
   private lastEventTime: number | null = null;
-  private pendingAgents: Map<string, { task: string; startTime: number }> = new Map();
+  private agents: Map<string, ActiveAgent> = new Map();
+  private allPendingTools: Map<string, { name: string; startTime: number }> = new Map();
   private lineBuffer = '';
   private lastNewBytesTime: number | null = null;
 
@@ -35,6 +36,7 @@ export class LogTailer implements ILogProvider {
       totalTokens: 0,
       toolCounts: {},
       activeAgents: [],
+      recentTools: [],
       parseErrors: 0,
       connectionStatus: 'waiting',
     };
@@ -42,14 +44,21 @@ export class LogTailer implements ILogProvider {
 
   getState(): State {
     const now = Date.now();
-    const activeAgents: ActiveAgent[] = Array.from(this.pendingAgents.entries()).map(
-      ([id, info]) => ({
-        id,
-        task: info.task,
-        elapsedMs: Math.max(0, now - info.startTime),
-        startTime: info.startTime,
-      })
-    );
+    const GRACE_PERIOD_MS = 30_000;
+
+    const activeAgents: ActiveAgent[] = Array.from(this.agents.values())
+      .map(agent => ({
+        ...agent,
+        elapsedMs: agent.completed 
+          ? (agent.endTime! - agent.startTime) 
+          : Math.max(0, now - agent.startTime),
+      }))
+      .filter(agent => {
+        if (!agent.completed) return true;
+        const age = now - (agent.endTime ?? 0);
+        return age <= GRACE_PERIOD_MS;
+      });
+
     return {
       ...this.state,
       uptimeMs: this.firstEventTime ? Math.max(0, now - this.firstEventTime) : 0,
@@ -82,7 +91,8 @@ export class LogTailer implements ILogProvider {
     this.firstEventTime = null;
     this.lastEventTime = null;
     this.lastNewBytesTime = null;
-    this.pendingAgents.clear();
+    this.agents.clear();
+    this.allPendingTools.clear();
     this.state.connectionStatus = 'waiting';
   }
 
@@ -207,7 +217,7 @@ export class LogTailer implements ILogProvider {
     if (topType === 'tool_use') {
       this.handleToolUse(event, eventTime);
     } else if (topType === 'tool_result') {
-      this.handleToolResult(event);
+      this.handleToolResult(event, eventTime);
     }
 
     // Assistant message: extract tool_use from content array
@@ -225,7 +235,7 @@ export class LogTailer implements ILogProvider {
       const msg = event.message as JsonEvent;
       if (Array.isArray(msg.content)) {
         for (const item of msg.content as JsonEvent[]) {
-          if (item.type === 'tool_result') this.handleToolResult(item);
+          if (item.type === 'tool_result') this.handleToolResult(item, eventTime);
         }
       }
     }
@@ -237,26 +247,65 @@ export class LogTailer implements ILogProvider {
 
     this.state.toolCounts[name] = (this.state.toolCounts[name] ?? 0) + 1;
 
-    if (name === 'Agent') {
-      const id = (typeof event.id === 'string' ? event.id : null) ??
-                 (typeof event.tool_use_id === 'string' ? event.tool_use_id : null);
-      if (id && !this.pendingAgents.has(id)) {
+    const id = (typeof event.id === 'string' ? event.id : null) ??
+               (typeof event.tool_use_id === 'string' ? event.tool_use_id : null);
+    
+    if (id) {
+      this.allPendingTools.set(id, { name, startTime: eventTime });
+      
+      if (name === 'Agent') {
         const input = (event.input && typeof event.input === 'object')
           ? (event.input as Record<string, unknown>)
           : {};
         const desc = typeof input.description === 'string' ? input.description : '';
         const prompt = typeof input.prompt === 'string' ? input.prompt : '';
         const task = (desc || prompt).slice(0, 100);
-        this.pendingAgents.set(id, { task, startTime: eventTime });
+        const parentId = (typeof input.parentId === 'string' ? input.parentId : null) ??
+                         (typeof input.parent_id === 'string' ? input.parent_id : null);
+        
+        this.agents.set(id, {
+          id,
+          task,
+          startTime: eventTime,
+          elapsedMs: 0,
+          completed: false,
+          parentId: parentId ?? undefined
+        });
       }
     }
   }
 
-  private handleToolResult(event: JsonEvent): void {
+  private handleToolResult(event: JsonEvent, eventTime: number): void {
     const toolUseId =
       (typeof event.tool_use_id === 'string' ? event.tool_use_id : null) ??
       (typeof event.id === 'string' ? event.id : null);
-    if (toolUseId) this.pendingAgents.delete(toolUseId);
+
+    if (!toolUseId) return;
+
+    const pending = this.allPendingTools.get(toolUseId);
+    if (pending) {
+      const durationMs = eventTime - pending.startTime;
+      const status = event.is_error ? 'failure' : 'success';
+
+      this.state.recentTools.unshift({
+        name: pending.name,
+        status,
+        startTime: pending.startTime,
+        durationMs
+      });
+
+      if (this.state.recentTools.length > 10) {
+        this.state.recentTools.pop();
+      }
+
+      this.allPendingTools.delete(toolUseId);
+
+      const agent = this.agents.get(toolUseId);
+      if (agent) {
+        agent.completed = true;
+        agent.endTime = eventTime;
+      }
+    }
   }
 }
 
