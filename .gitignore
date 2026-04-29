@@ -21,6 +21,8 @@ Thumbs.db
 
 # QA reports and screenshots (test artifacts)
 .qa-reports/
+.drift-reports/
+.harness/
 
 # Binary skill archives
 *.skill
