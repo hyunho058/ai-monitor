@@ -1,5 +1,5 @@
 import * as fs from 'fs';
-import { State, ILogProvider, ActiveAgent } from '../types/state.js';
+import { State, ILogProvider, ActiveAgent, FileActivity, Task } from '../types/state.js';
 import { findLatestSession } from './autoDetect.js';
 
 type JsonEvent = Record<string, unknown>;
@@ -16,7 +16,9 @@ export class LogTailer implements ILogProvider {
   private firstEventTime: number | null = null;
   private lastEventTime: number | null = null;
   private agents: Map<string, ActiveAgent> = new Map();
-  private allPendingTools: Map<string, { name: string; startTime: number }> = new Map();
+  private allPendingTools: Map<string, { name: string; startTime: number; toolType: 'agent' | 'skill' | 'file'; skillName?: string }> = new Map();
+  private pendingFileActivities: Map<string, FileActivity> = new Map();
+  private tasks: Map<string, Task> = new Map();
   private lineBuffer = '';
   private lastNewBytesTime: number | null = null;
 
@@ -37,6 +39,9 @@ export class LogTailer implements ILogProvider {
       toolCounts: {},
       activeAgents: [],
       recentTools: [],
+      recentSkills: [],
+      fileActivities: [],
+      tasks: [],
       parseErrors: 0,
       connectionStatus: 'waiting',
     };
@@ -59,11 +64,25 @@ export class LogTailer implements ILogProvider {
         return age <= GRACE_PERIOD_MS;
       });
 
+    const tasks: Task[] = Array.from(this.tasks.values())
+      .filter(task => {
+        if (task.status === 'active') return true;
+        const endTime = task.startTime + (task.durationMs ?? 0);
+        return (now - endTime) <= GRACE_PERIOD_MS;
+      })
+      .map(task => ({
+        ...task,
+        durationMs: task.status === 'active'
+          ? Math.max(0, now - task.startTime)
+          : task.durationMs,
+      }));
+
     return {
       ...this.state,
       uptimeMs: this.firstEventTime ? Math.max(0, now - this.firstEventTime) : 0,
       idleMs: this.lastEventTime ? Math.max(0, now - this.lastEventTime) : 0,
       activeAgents,
+      tasks,
     };
   }
 
@@ -93,6 +112,8 @@ export class LogTailer implements ILogProvider {
     this.lastNewBytesTime = null;
     this.agents.clear();
     this.allPendingTools.clear();
+    this.pendingFileActivities.clear();
+    this.tasks.clear();
     this.state.connectionStatus = 'waiting';
   }
 
@@ -249,28 +270,55 @@ export class LogTailer implements ILogProvider {
 
     const id = (typeof event.id === 'string' ? event.id : null) ??
                (typeof event.tool_use_id === 'string' ? event.tool_use_id : null);
-    
+
+    const toolType = classifyTool(name);
+
     if (id) {
-      this.allPendingTools.set(id, { name, startTime: eventTime });
-      
+      this.allPendingTools.set(id, { name, startTime: eventTime, toolType });
+
       if (name === 'Agent') {
         const input = (event.input && typeof event.input === 'object')
           ? (event.input as Record<string, unknown>)
           : {};
+        const subagentType = typeof input.subagent_type === 'string' ? input.subagent_type : '';
         const desc = typeof input.description === 'string' ? input.description : '';
         const prompt = typeof input.prompt === 'string' ? input.prompt : '';
-        const task = (desc || prompt).slice(0, 100);
+        const task = (subagentType || desc || prompt || '(agent)').slice(0, 100);
         const parentId = (typeof input.parentId === 'string' ? input.parentId : null) ??
                          (typeof input.parent_id === 'string' ? input.parent_id : null);
-        
+
         this.agents.set(id, {
           id,
           task,
           startTime: eventTime,
           elapsedMs: 0,
           completed: false,
-          parentId: parentId ?? undefined
+          parentId: parentId ?? undefined,
         });
+
+        if (!parentId) {
+          this.tasks.set(id, {
+            id,
+            description: task,
+            status: 'active',
+            startTime: eventTime,
+          });
+        }
+      } else if (name === 'Skill') {
+        const input = (event.input && typeof event.input === 'object')
+          ? (event.input as Record<string, unknown>)
+          : {};
+        const skillName = typeof input.skill === 'string' ? input.skill : '(skill)';
+        const pending = this.allPendingTools.get(id);
+        if (pending) pending.skillName = skillName;
+      } else if (toolType === 'file') {
+        const input = (event.input && typeof event.input === 'object')
+          ? (event.input as Record<string, unknown>)
+          : {};
+        const path = extractFilePath(name, input);
+        const operation = fileOperation(name);
+        const activity: FileActivity = { operation, path, status: 'pending', startTime: eventTime };
+        this.pendingFileActivities.set(id, activity);
       }
     }
   }
@@ -285,17 +333,32 @@ export class LogTailer implements ILogProvider {
     const pending = this.allPendingTools.get(toolUseId);
     if (pending) {
       const durationMs = eventTime - pending.startTime;
-      const status = event.is_error ? 'failure' : 'success';
+      const isError = !!event.is_error;
+      const status: 'success' | 'failure' = isError ? 'failure' : 'success';
 
-      this.state.recentTools.unshift({
-        name: pending.name,
-        status,
-        startTime: pending.startTime,
-        durationMs
-      });
-
-      if (this.state.recentTools.length > 10) {
-        this.state.recentTools.pop();
+      if (pending.name === 'Skill') {
+        this.state.recentSkills.unshift({
+          name: pending.skillName ?? '(skill)',
+          startTime: pending.startTime,
+        });
+        if (this.state.recentSkills.length > 5) this.state.recentSkills.pop();
+      } else if (pending.toolType === 'file') {
+        const activity = this.pendingFileActivities.get(toolUseId);
+        if (activity) {
+          activity.status = status;
+          activity.durationMs = durationMs;
+          this.state.fileActivities.unshift(activity);
+          if (this.state.fileActivities.length > 10) this.state.fileActivities.pop();
+          this.pendingFileActivities.delete(toolUseId);
+        }
+      } else {
+        this.state.recentTools.unshift({
+          name: pending.name,
+          status,
+          startTime: pending.startTime,
+          durationMs,
+        });
+        if (this.state.recentTools.length > 10) this.state.recentTools.pop();
       }
 
       this.allPendingTools.delete(toolUseId);
@@ -305,8 +368,41 @@ export class LogTailer implements ILogProvider {
         agent.completed = true;
         agent.endTime = eventTime;
       }
+
+      const task = this.tasks.get(toolUseId);
+      if (task) {
+        task.status = isError ? 'failed' : 'completed';
+        task.durationMs = durationMs;
+      }
     }
   }
+}
+
+const FILE_TOOLS: Record<string, FileActivity['operation']> = {
+  Read: 'read',
+  Write: 'write',
+  Edit: 'write',
+  Grep: 'grep',
+  Glob: 'list',
+};
+
+function classifyTool(name: string): 'agent' | 'skill' | 'file' {
+  if (name === 'Agent') return 'agent';
+  if (name === 'Skill') return 'skill';
+  if (name in FILE_TOOLS) return 'file';
+  return 'skill';
+}
+
+function fileOperation(name: string): FileActivity['operation'] {
+  return FILE_TOOLS[name] ?? 'other';
+}
+
+function extractFilePath(toolName: string, input: Record<string, unknown>): string {
+  const candidates = ['path', 'file_path', 'filePath', 'pattern', 'directory', 'dir'];
+  for (const key of candidates) {
+    if (typeof input[key] === 'string') return input[key] as string;
+  }
+  return toolName;
 }
 
 function parseTimestamp(event: JsonEvent): number | null {
