@@ -251,12 +251,21 @@ export class LogTailer implements ILogProvider {
       }
     }
 
-    // User message: extract tool_result from content array
+    // User message: extract tool_result from content array OR skill command invocations
     if (topType === 'user' && event.message && typeof event.message === 'object') {
       const msg = event.message as JsonEvent;
       if (Array.isArray(msg.content)) {
         for (const item of msg.content as JsonEvent[]) {
           if (item.type === 'tool_result') this.handleToolResult(item, eventTime);
+        }
+      }
+      // Skill invocations arrive as plain string content with <command-name>/skill</command-name>
+      if (typeof msg.content === 'string') {
+        const match = msg.content.match(/<command-name>\/([^<]+)<\/command-name>/);
+        if (match) {
+          const skillName = '/' + match[1];
+          this.state.recentSkills.unshift({ name: skillName, startTime: eventTime });
+          if (this.state.recentSkills.length > 5) this.state.recentSkills.pop();
         }
       }
     }
