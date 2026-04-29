@@ -3,6 +3,37 @@ export interface ActiveAgent {
   task: string;
   elapsedMs: number;
   startTime: number;
+  parentId?: string;
+  completed: boolean;
+  endTime?: number;
+}
+
+export interface RecentTool {
+  name: string;
+  status: 'pending' | 'success' | 'failure';
+  startTime: number;
+  durationMs?: number;
+}
+
+export interface RecentSkill {
+  name: string;
+  startTime: number;
+}
+
+export interface FileActivity {
+  operation: 'read' | 'write' | 'grep' | 'list' | 'other';
+  path: string;
+  status: 'pending' | 'success' | 'failure';
+  startTime: number;
+  durationMs?: number;
+}
+
+export interface Task {
+  id: string;
+  description: string;
+  status: 'active' | 'completed' | 'failed';
+  startTime: number;
+  durationMs?: number;
 }
 
 export interface State {
@@ -14,6 +45,10 @@ export interface State {
   totalTokens: number;
   toolCounts: Record<string, number>;
   activeAgents: ActiveAgent[];
+  recentTools: RecentTool[];
+  recentSkills: RecentSkill[];
+  fileActivities: FileActivity[];
+  tasks: Task[];
   parseErrors: number;
   connectionStatus: 'connected' | 'waiting' | 'frozen';
 }
