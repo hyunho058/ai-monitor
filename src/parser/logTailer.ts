@@ -36,6 +36,10 @@ export class LogTailer implements ILogProvider {
       uptimeMs: 0,
       idleMs: 0,
       totalTokens: 0,
+      inputTokens: 0,
+      outputTokens: 0,
+      cacheReadTokens: 0,
+      cacheCreationTokens: 0,
       toolCounts: {},
       activeAgents: [],
       recentTools: [],
@@ -230,6 +234,10 @@ export class LogTailer implements ILogProvider {
       const totalContext = inp + cacheRead + cacheCreate;
       if (totalContext > 0) this.state.contextUsed = totalContext;
       this.state.totalTokens += inp + out;
+      this.state.inputTokens += inp;
+      this.state.outputTokens += out;
+      this.state.cacheReadTokens += cacheRead;
+      this.state.cacheCreationTokens += cacheCreate;
     }
 
     const topType = typeof event.type === 'string' ? event.type : '';
