@@ -43,6 +43,10 @@ export interface State {
   uptimeMs: number;
   idleMs: number;
   totalTokens: number;
+  inputTokens: number;
+  outputTokens: number;
+  cacheReadTokens: number;
+  cacheCreationTokens: number;
   toolCounts: Record<string, number>;
   activeAgents: ActiveAgent[];
   recentTools: RecentTool[];
