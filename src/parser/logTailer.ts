@@ -46,6 +46,7 @@ export class LogTailer implements ILogProvider {
       recentSkills: [],
       fileActivities: [],
       tasks: [],
+      pendingQuestion: null,
       parseErrors: 0,
       connectionStatus: 'waiting',
     };
@@ -293,7 +294,13 @@ export class LogTailer implements ILogProvider {
     if (id) {
       this.allPendingTools.set(id, { name, startTime: eventTime, toolType });
 
-      if (name === 'Agent') {
+      if (name === 'AskUserQuestion') {
+        const input = (event.input && typeof event.input === 'object')
+          ? (event.input as Record<string, unknown>)
+          : {};
+        const q = typeof input.question === 'string' ? input.question : '(waiting for input)';
+        this.state.pendingQuestion = q;
+      } else if (name === 'Agent') {
         const input = (event.input && typeof event.input === 'object')
           ? (event.input as Record<string, unknown>)
           : {};
@@ -353,7 +360,9 @@ export class LogTailer implements ILogProvider {
       const isError = !!event.is_error;
       const status: 'success' | 'failure' = isError ? 'failure' : 'success';
 
-      if (pending.name === 'Skill') {
+      if (pending.name === 'AskUserQuestion') {
+        this.state.pendingQuestion = null;
+      } else if (pending.name === 'Skill') {
         this.state.recentSkills.unshift({
           name: pending.skillName ?? '(skill)',
           startTime: pending.startTime,

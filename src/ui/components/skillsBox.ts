@@ -36,29 +36,5 @@ export function renderSkillsBox(state: State, cols: number): string {
     }
   }
 
-  // Add a small spacer
-  lines.push('');
-
-  // Aggregated activity
-  const activityLabels: Record<string, string> = {
-    'Bash': 'bash',
-    'Edit': 'edit',
-    'Write': 'write',
-    'Read': 'read',
-    'Grep': 'grep',
-  };
-
-  const activityParts: string[] = [];
-  for (const [tool, label] of Object.entries(activityLabels)) {
-    const count = state.toolCounts[tool] ?? 0;
-    if (count > 0) {
-      activityParts.push(`${label}:${chalk.yellow(count)}`);
-    }
-  }
-
-  if (activityParts.length > 0) {
-    lines.push(chalk.dim('  Activity: ') + activityParts.join('  '));
-  }
-
   return chalk.bold.cyan('Skill') + '\n' + lines.join('\n');
 }

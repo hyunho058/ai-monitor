@@ -53,6 +53,7 @@ export interface State {
   recentSkills: RecentSkill[];
   fileActivities: FileActivity[];
   tasks: Task[];
+  pendingQuestion: string | null;
   parseErrors: number;
   connectionStatus: 'connected' | 'waiting' | 'frozen';
 }

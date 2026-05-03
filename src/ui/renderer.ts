@@ -16,9 +16,14 @@ export function render(state: State, cols: number, rows: number, scrollOffset: n
     return scrollOffset;
   }
 
-  // Layout order: Header → Tasks → Subagents → Skills → Tools → File Activity
+  // Layout order: Header → [Question banner] → Tasks → Subagents → Skills → Tools → File Activity
+  const questionBanner = state.pendingQuestion
+    ? chalk.bgYellow.black.bold(' ? WAITING FOR INPUT ') + ' ' + chalk.yellow(state.pendingQuestion)
+    : null;
+
   const parts: string[] = [
     renderHeader(state, cols),
+    ...(questionBanner ? [questionBanner] : []),
     renderTasksBox(state, cols),
     renderAgentsBox(state, cols),
     renderSkillsBox(state, cols),
