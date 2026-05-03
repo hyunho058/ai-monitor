@@ -26,7 +26,7 @@ function fmtPath(filePath: string, maxLen: number): string {
 
 export function renderFileActivityBox(state: State, cols: number): string {
   const maxPath = Math.max(16, cols - 22);
-  const activities = state.fileActivities.slice(0, 5);
+  const activities = state.fileActivities;
 
   const lines: string[] = [];
 

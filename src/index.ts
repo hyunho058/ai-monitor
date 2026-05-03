@@ -9,6 +9,12 @@ function getCols(): number {
   return process.stdout.columns ?? 120;
 }
 
+function getRows(): number {
+  return process.stdout.rows ?? 40;
+}
+
+let scrollOffset = 0;
+
 function shutdown(tailer: LogTailer, interval: ReturnType<typeof setInterval>): void {
   clearInterval(interval);
   tailer.stop();
@@ -16,7 +22,8 @@ function shutdown(tailer: LogTailer, interval: ReturnType<typeof setInterval>): 
     process.stdin.setRawMode(false);
   }
   readline.emitKeypressEvents(process.stdin);
-  process.stdout.write('\n');
+  // Exit alternate buffer and show cursor
+  process.stdout.write('\x1b[?1049l\x1b[?25h');
   process.exit(0);
 }
 
@@ -28,9 +35,13 @@ function main(): void {
   tailer.start();
 
   let cols = getCols();
+  let rows = getRows();
+
+  // Enter alternate buffer and hide cursor
+  process.stdout.write('\x1b[?1049h\x1b[?25l');
 
   // Initial render
-  render(tailer.getState(), cols);
+  scrollOffset = render(tailer.getState(), cols, rows, scrollOffset);
 
   const interval = setInterval(() => {
     // Auto-detect: re-evaluate latest session file
@@ -42,12 +53,14 @@ function main(): void {
     }
 
     cols = getCols();
-    render(tailer.getState(), cols);
+    rows = getRows();
+    scrollOffset = render(tailer.getState(), cols, rows, scrollOffset);
   }, RENDER_INTERVAL_MS);
 
-  // Handle SIGWINCH — update cols on next render cycle (D8)
+  // Handle SIGWINCH — update cols/rows on next render cycle (D8)
   process.on('SIGWINCH', () => {
     cols = getCols();
+    rows = getRows();
   });
 
   // Keyboard interaction (D14)
@@ -65,7 +78,20 @@ function main(): void {
 
       if (key.name === 'r') {
         cols = getCols();
-        render(tailer.getState(), cols);
+        rows = getRows();
+        scrollOffset = render(tailer.getState(), cols, rows, scrollOffset);
+      }
+
+      // Scrolling handlers
+      if (key.name === 'j' || key.name === 'down') {
+        scrollOffset++;
+        scrollOffset = render(tailer.getState(), cols, rows, scrollOffset);
+      }
+      if (key.name === 'k' || key.name === 'up') {
+        if (scrollOffset > 0) {
+          scrollOffset--;
+          scrollOffset = render(tailer.getState(), cols, rows, scrollOffset);
+        }
       }
     });
   }

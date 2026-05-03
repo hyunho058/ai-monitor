@@ -1,4 +1,3 @@
-import Table from 'cli-table3';
 import chalk from 'chalk';
 import { State } from '../../types/state.js';
 
@@ -9,32 +8,25 @@ function fmtDuration(ms: number | undefined): string {
 }
 
 export function renderToolsBox(state: State): string {
-  const entries = Object.entries(state.toolCounts).sort((a, b) => b[1] - a[1]);
+  const toolEntries = Object.entries(state.toolCounts).sort((a, b) => b[1] - a[1]);
+  const lines: string[] = [];
 
-  const table = new Table({
-    head: [chalk.cyan('Tool'), chalk.cyan('Calls')],
-    style: { head: [], border: [] },
-    colWidths: [30, 8],
-    colAligns: ['left', 'right'],
-  });
-
-  if (entries.length === 0) {
-    table.push([{ colSpan: 2, content: chalk.dim('(no tool calls yet)') }]);
+  // Tools Count Section
+  lines.push(chalk.bold.cyan('Tools Usage'));
+  if (toolEntries.length === 0) {
+    lines.push(chalk.dim('  (no tool calls yet)'));
   } else {
-    for (const [name, count] of entries) {
-      table.push([name, String(count)]);
+    for (const [name, count] of toolEntries) {
+      lines.push(`  ${name.padEnd(20)} ${chalk.yellow(count)} calls`);
     }
   }
 
-  const recentTable = new Table({
-    head: [chalk.cyan('Recent'), chalk.cyan('Status'), chalk.cyan('Duration')],
-    style: { head: [], border: [] },
-    colWidths: [24, 10, 10],
-    colAligns: ['left', 'left', 'right'],
-  });
+  lines.push(''); // Spacer
 
+  // Recent Tools Section
+  lines.push(chalk.bold.cyan('Recent Tool Calls'));
   if (state.recentTools.length === 0) {
-    recentTable.push([{ colSpan: 3, content: chalk.dim('(none yet)') }]);
+    lines.push(chalk.dim('  (none yet)'));
   } else {
     for (const tool of state.recentTools) {
       const statusIcon = tool.status === 'success'
@@ -42,12 +34,12 @@ export function renderToolsBox(state: State): string {
         : tool.status === 'failure'
           ? chalk.red('✗')
           : chalk.yellow('…');
-      recentTable.push([tool.name, statusIcon, fmtDuration(tool.durationMs)]);
+      
+      const namePart = tool.name.padEnd(20);
+      const durPart = fmtDuration(tool.durationMs).padStart(8);
+      lines.push(`  ${statusIcon} ${namePart} ${chalk.dim(durPart)}`);
     }
   }
 
-  return (
-    chalk.bold.cyan('Tools') + '\n' + table.toString() + '\n' +
-    chalk.bold.cyan('Recent Tool Calls') + '\n' + recentTable.toString()
-  );
+  return lines.join('\n');
 }
