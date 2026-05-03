@@ -11,15 +11,11 @@ export function renderToolsBox(state: State): string {
   const toolEntries = Object.entries(state.toolCounts).sort((a, b) => b[1] - a[1]);
   const lines: string[] = [];
 
-  // Tools Count Section
+  // Tools Count Section (inline, below title)
   lines.push(chalk.bold.cyan('Tools Usage'));
-  if (toolEntries.length === 0) {
-    lines.push(chalk.dim('  (no tool calls yet)'));
-  } else {
-    for (const [name, count] of toolEntries) {
-      lines.push(`  ${name.padEnd(20)} ${chalk.yellow(count)} calls`);
-    }
-  }
+  const inlineParts = toolEntries.map(([name, count]) => `${name.toLowerCase()}:${chalk.yellow(count)}`);
+  const inlineStr = inlineParts.length > 0 ? inlineParts.join('  ') : chalk.dim('(no tool calls yet)');
+  lines.push('  ' + inlineStr);
 
   lines.push('');
 
@@ -28,7 +24,7 @@ export function renderToolsBox(state: State): string {
   if (state.recentTools.length === 0) {
     lines.push(chalk.dim('  (none yet)'));
   } else {
-    for (const tool of state.recentTools) {
+    for (const tool of state.recentTools.slice(0, 5)) {
       const statusIcon = tool.status === 'success'
         ? chalk.green('✓')
         : tool.status === 'failure'
