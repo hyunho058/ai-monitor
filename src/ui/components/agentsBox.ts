@@ -1,4 +1,3 @@
-import Table from 'cli-table3';
 import chalk from 'chalk';
 import { State, ActiveAgent } from '../../types/state.js';
 
@@ -52,39 +51,38 @@ function flattenTree(nodes: TreeNode[], depth = 0): { agent: ActiveAgent; depth:
 }
 
 export function renderAgentsBox(state: State, cols: number): string {
-  const taskWidth = Math.max(20, cols - 42);
-
-  const table = new Table({
-    head: [chalk.cyan('Agent'), chalk.cyan('Elapsed')],
-    style: { head: [], border: [] },
-    colWidths: [taskWidth + 16, 10],
-  });
+  const lines: string[] = [];
+  lines.push(chalk.bold.cyan('Subagents'));
 
   if (state.activeAgents.length === 0) {
-    table.push([{ colSpan: 2, content: chalk.dim('(no active agents)') }]);
+    lines.push(chalk.dim('  (no active agents)'));
   } else {
     const roots = buildTree(state.activeAgents);
-    const flattened = flattenTree(roots).slice(0, 5);
+    const flattened = flattenTree(roots);
 
     for (const { agent, depth, isLast } of flattened) {
-      let prefix = '';
+      let prefix = '  ';
       if (depth > 0) {
-        prefix = '  '.repeat(depth - 1) + (isLast ? '└─ ' : '├─ ');
+        prefix += '  '.repeat(depth - 1) + (isLast ? '└─ ' : '├─ ');
       }
 
-      const nameWidth = taskWidth + 14 - prefix.length;
-      const rawName = agent.task || '(agent)';
-      const truncated = rawName.length > nameWidth ? rawName.slice(0, nameWidth - 1) + '…' : rawName;
-      const name = prefix + truncated;
       const elapsed = fmtElapsed(agent.elapsedMs);
+      const rawName = agent.task || '(agent)';
 
+      const reservedWidth = prefix.length + 10;
+      const nameWidth = Math.max(10, cols - reservedWidth);
+      const truncated = rawName.length > nameWidth ? rawName.slice(0, nameWidth - 1) + '…' : rawName;
+
+      let nameStr = truncated;
       if (agent.completed) {
-        table.push([chalk.dim(name), chalk.dim(elapsed)]);
+        nameStr = chalk.dim(nameStr);
       } else {
-        table.push([chalk.green(name), chalk.yellow(elapsed)]);
+        nameStr = chalk.green(nameStr);
       }
+
+      lines.push(`${prefix}${nameStr} ${chalk.yellow(elapsed.padStart(8))}`);
     }
   }
 
-  return chalk.bold.cyan('Subagents') + '\n' + table.toString();
+  return lines.join('\n');
 }

@@ -17,7 +17,7 @@ function statusIcon(task: Task): string {
 
 export function renderTasksBox(state: State, cols: number): string {
   const maxDesc = Math.max(20, cols - 24);
-  const tasks = state.tasks.slice(0, 5);
+  const tasks = state.tasks;
 
   const lines: string[] = [];
 

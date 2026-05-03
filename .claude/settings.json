@@ -1,0 +1,21 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/skills/git-workflow-orchestrator/scripts/secret-scanner.sh",
+            "description": "Secret scanner: detect and block secrets (API keys, private keys, tokens, etc.) in staged files before git commit"
+          },
+          {
+            "type": "command",
+            "command": "bash .claude/skills/git-workflow-orchestrator/scripts/commit-lint.sh",
+            "description": "Commit lint: validate and enforce Conventional Commits format before git commit"
+          }
+        ]
+      }
+    ]
+  }
+}
