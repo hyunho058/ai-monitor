@@ -1,4 +1,3 @@
-import Table from 'cli-table3';
 import chalk from 'chalk';
 import { State, ActiveAgent } from '../../types/state.js';
 
@@ -69,9 +68,8 @@ export function renderAgentsBox(state: State, cols: number): string {
 
       const elapsed = fmtElapsed(agent.elapsedMs);
       const rawName = agent.task || '(agent)';
-      
-      // Calculate available width for the name
-      const reservedWidth = prefix.length + 10; // prefix + elapsed time space
+
+      const reservedWidth = prefix.length + 10;
       const nameWidth = Math.max(10, cols - reservedWidth);
       const truncated = rawName.length > nameWidth ? rawName.slice(0, nameWidth - 1) + '…' : rawName;
 

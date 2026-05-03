@@ -21,7 +21,7 @@ export function renderToolsBox(state: State): string {
     }
   }
 
-  lines.push(''); // Spacer
+  lines.push('');
 
   // Recent Tools Section
   lines.push(chalk.bold.cyan('Recent Tool Calls'));
@@ -34,7 +34,7 @@ export function renderToolsBox(state: State): string {
         : tool.status === 'failure'
           ? chalk.red('✗')
           : chalk.yellow('…');
-      
+
       const namePart = tool.name.padEnd(20);
       const durPart = fmtDuration(tool.durationMs).padStart(8);
       lines.push(`  ${statusIcon} ${namePart} ${chalk.dim(durPart)}`);

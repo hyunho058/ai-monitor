@@ -17,7 +17,6 @@ function normalizeName(name: string): string {
 
 export function renderSkillsBox(state: State, cols: number): string {
   const nameWidth = Math.max(10, cols - 16);
-  // Show the recent high-level skills
   const skills = state.recentSkills || [];
 
   const lines: string[] = [];
