@@ -1,5 +1,6 @@
 import chalk from 'chalk';
 import { State } from '../../types/state.js';
+import { sectionTitle, sectionTitleDouble, sectionBottomDouble } from './utils.js';
 
 function fmtDuration(ms: number | undefined): string {
   if (ms === undefined) return '—';
@@ -7,20 +8,16 @@ function fmtDuration(ms: number | undefined): string {
   return `${(ms / 1000).toFixed(1)}s`;
 }
 
-export function renderToolsBox(state: State): string {
+export function renderToolsBox(state: State, cols: number): string {
   const toolEntries = Object.entries(state.toolCounts).sort((a, b) => b[1] - a[1]);
   const lines: string[] = [];
 
-  // Tools Count Section (inline, below title)
-  lines.push(chalk.bold.cyan('Tools Usage'));
-  const inlineParts = toolEntries.map(([name, count]) => `${name.toLowerCase()}:${chalk.yellow(count)}`);
+  lines.push(sectionTitleDouble('Tools Usage', cols));
+  const inlineParts = toolEntries.map(([name, count]) => `${name.toLowerCase()}:${chalk.cyan(count)}`);
   const inlineStr = inlineParts.length > 0 ? inlineParts.join('  ') : chalk.dim('(no tool calls yet)');
   lines.push('  ' + inlineStr);
 
-  lines.push('');
-
-  // Recent Tools Section
-  lines.push(chalk.bold.cyan('Recent Tool Calls'));
+  lines.push(sectionTitle('Recent Tool Calls', cols));
   if (state.recentTools.length === 0) {
     lines.push(chalk.dim('  (none yet)'));
   } else {
@@ -37,5 +34,6 @@ export function renderToolsBox(state: State): string {
     }
   }
 
+  lines.push(sectionBottomDouble(cols));
   return lines.join('\n');
 }

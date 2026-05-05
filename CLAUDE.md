@@ -1,6 +1,6 @@
-# ai-monitor (ccmonitor-lite)
+# ai-monitor
 
-A TUI dashboard for real-time monitoring of Claude Code JSONL sessions. TypeScript + chalk + cli-table3 + log-update.
+A TUI dashboard for real-time monitoring of AI Agent sessions (currently tailored for Claude Code JSONL sessions, but extensible). TypeScript + chalk + cli-table3 + log-update.
 
 ## Harness: TUI Pipeline Team
 
@@ -23,3 +23,14 @@ A TUI dashboard for real-time monitoring of Claude Code JSONL sessions. TypeScri
 | Date | Change | Target | Reason |
 |------|--------|--------|--------|
 | 2026-05-01 | Initial setup | commit-agent, pr-agent, git-workflow-orchestrator, commit-lint, secret-scanner | Build Git workflow team harness |
+
+## Harness: AI Monitor Maker Team
+
+**Goal:** Design and build complete TUI monitoring dashboard applications from scratch, covering architecture design, frontend component implementation, and backend data pipeline implementation.
+
+**Trigger:** Use the `ai-monitor-make` skill for requests to build a new monitoring dashboard, add a major feature spanning design + frontend + backend, or redo any phase of a prior maker run. Simple single-file edits can be handled directly.
+
+**Change History:**
+| Date | Change | Target | Reason |
+|------|--------|--------|--------|
+| 2026-05-04 | Initial setup | maker-design, maker-frontend, maker-backend, ai-monitor-make | Build AI Monitor Maker team harness |

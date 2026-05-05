@@ -1,6 +1,7 @@
 import chalk from 'chalk';
 import { State, FileActivity } from '../../types/state.js';
 import * as path from 'path';
+import { sectionTitleDouble, sectionBottomDouble } from './utils.js';
 
 const OP_LABELS: Record<FileActivity['operation'], string> = {
   read: 'READ ',
@@ -46,5 +47,5 @@ export function renderFileActivityBox(state: State, cols: number): string {
     }
   }
 
-  return chalk.bold.cyan('File Activity') + '\n' + lines.join('\n');
+  return sectionTitleDouble('File Activity', cols) + '\n' + lines.join('\n') + '\n' + sectionBottomDouble(cols);
 }

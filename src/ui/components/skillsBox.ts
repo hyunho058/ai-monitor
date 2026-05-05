@@ -1,5 +1,6 @@
 import chalk from 'chalk';
 import { State } from '../../types/state.js';
+import { sectionTitleDouble, sectionBottomDouble } from './utils.js';
 
 function fmtTime(epochMs: number): string {
   const d = new Date(epochMs);
@@ -36,5 +37,5 @@ export function renderSkillsBox(state: State, cols: number): string {
     }
   }
 
-  return chalk.bold.cyan('Skill') + '\n' + lines.join('\n');
+  return sectionTitleDouble('Skill', cols) + '\n' + lines.join('\n') + '\n' + sectionBottomDouble(cols);
 }

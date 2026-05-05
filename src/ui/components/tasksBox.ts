@@ -1,5 +1,6 @@
 import chalk from 'chalk';
 import { State, Task } from '../../types/state.js';
+import { sectionTitleDouble, sectionBottomDouble } from './utils.js';
 
 function fmtDuration(ms: number | undefined): string {
   if (ms === undefined) return '—';
@@ -35,5 +36,5 @@ export function renderTasksBox(state: State, cols: number): string {
     }
   }
 
-  return chalk.bold.cyan('Tasks') + '\n' + lines.join('\n');
+  return sectionTitleDouble('Tasks', cols) + '\n' + lines.join('\n') + '\n' + sectionBottomDouble(cols);
 }
