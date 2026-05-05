@@ -1,5 +1,6 @@
 import chalk from 'chalk';
 import { State, ActiveAgent } from '../../types/state.js';
+import { sectionTitleDouble, sectionBottomDouble } from './utils.js';
 
 function fmtElapsed(ms: number): string {
   const s = Math.floor(ms / 1000);
@@ -52,7 +53,7 @@ function flattenTree(nodes: TreeNode[], depth = 0): { agent: ActiveAgent; depth:
 
 export function renderAgentsBox(state: State, cols: number): string {
   const lines: string[] = [];
-  lines.push(chalk.bold.cyan('Subagents'));
+  lines.push(sectionTitleDouble('Subagents', cols));
 
   if (state.activeAgents.length === 0) {
     lines.push(chalk.dim('  (no active agents)'));
@@ -84,5 +85,5 @@ export function renderAgentsBox(state: State, cols: number): string {
     }
   }
 
-  return lines.join('\n');
+  return lines.join('\n') + '\n' + sectionBottomDouble(cols);
 }

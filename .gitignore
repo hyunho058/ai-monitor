@@ -30,6 +30,8 @@ Thumbs.db
 # Local dev scaffolding
 skills/
 specs/
+_workspace*/
+deep-interview-outputs/
 
 # Logs
 *.log

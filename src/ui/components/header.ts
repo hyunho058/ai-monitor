@@ -78,8 +78,8 @@ export function renderHeader(state: State, cols: number): string {
   const botLine = wrapPills(botItems, sep2, cols);
 
   const label = cols < 80
-    ? chalk.bold.cyan('ccmonitor-lite')
-    : chalk.bold.cyan('╔═ ccmonitor-lite ═╗');
+    ? chalk.bold.cyan('ai-monitor')
+    : chalk.bold.cyan('╔═ ai-monitor ═╗');
 
   return label + '\n' + topLine + '\n' + botLine;
 }

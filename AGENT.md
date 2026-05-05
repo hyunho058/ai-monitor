@@ -1,9 +1,9 @@
 # AGENT.md
 
 ## Project Overview
-**ccmonitor-lite / ai-monitor**
+**ai-monitor**
 This project serves a dual purpose:
-1. **ccmonitor-lite**: A lightweight TUI (Text User Interface) dashboard for macOS terminals that monitors Claude Code (or other AI agent) sessions in real-time. It visualizes background tasks, resource usage, token counts, and tool invocations by tailing `~/.claude/projects/*/session.jsonl`.
+1. **ai-monitor**: A lightweight TUI (Text User Interface) dashboard for macOS terminals that monitors AI agent sessions (currently Claude Code) in real-time. It visualizes background tasks, resource usage, token counts, and tool invocations by tailing `~/.claude/projects/*/session.jsonl` or other data sources.
 2. **Agent Harness Ecosystem**: A collection of skills, hooks, and agent configurations designed to standardize AI interactions (e.g., `/scaffold`, `/qa`, `/check-harness`, `/doc-drift`).
 
 ## Technology Stack
