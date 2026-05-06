@@ -38,6 +38,7 @@ export interface Task {
 
 export interface State {
   sessionId: string;
+  projectName: string;
   model: string;
   contextUsed: number;
   uptimeMs: number;
