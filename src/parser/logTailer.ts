@@ -1,4 +1,5 @@
 import * as fs from 'fs';
+import * as path from 'path';
 import { State, ILogProvider, ActiveAgent, FileActivity, Task } from '../types/state.js';
 import { findLatestSession } from './autoDetect.js';
 
@@ -26,11 +27,15 @@ export class LogTailer implements ILogProvider {
     this.autoDetect = !filePath;
     this.filePath = filePath ?? null;
     this.state = this.makeInitialState();
+    if (filePath) {
+      this.state.projectName = deriveProjectName(filePath);
+    }
   }
 
   private makeInitialState(): State {
     return {
       sessionId: '',
+      projectName: '',
       model: '',
       contextUsed: 0,
       uptimeMs: 0,
@@ -429,6 +434,12 @@ function extractFilePath(toolName: string, input: Record<string, unknown>): stri
     if (typeof input[key] === 'string') return input[key] as string;
   }
   return toolName;
+}
+
+function deriveProjectName(filePath: string): string {
+  const dirName = path.basename(path.dirname(filePath));
+  const parts = dirName.split('-').filter(p => p.length > 0);
+  return parts[parts.length - 1] ?? dirName;
 }
 
 function parseTimestamp(event: JsonEvent): number | null {

@@ -8,14 +8,21 @@ interface SessionFile {
 }
 
 export function findLatestSession(): string | null {
+  const sessions = findAllSessions();
+  return sessions.length > 0 ? sessions[0].path : null;
+}
+
+const SESSION_MAX_AGE_MS = 15 * 60 * 1000;
+
+export function findAllSessions(): SessionFile[] {
   const claudeDir = path.join(os.homedir(), '.claude', 'projects');
+  const cutoff = Date.now() - SESSION_MAX_AGE_MS;
   try {
-    const files = collectSessionFiles(claudeDir);
-    if (files.length === 0) return null;
+    const files = collectSessionFiles(claudeDir).filter(f => f.mtime >= cutoff);
     files.sort((a, b) => b.mtime - a.mtime);
-    return files[0].path;
+    return files;
   } catch {
-    return null;
+    return [];
   }
 }
 
