@@ -9,7 +9,7 @@ import { renderToolsBox } from './components/toolsBox.js';
 
 let previousBodyLines = 0;
 
-export function render(state: State, cols: number, rows: number, scrollOffset: number): number {
+export function render(state: State, cols: number, rows: number, scrollOffset: number, sessionIndex?: number, sessionCount?: number): number {
   if (state.connectionStatus === 'waiting') {
     process.stdout.write('\x1b[0f\x1b[2J');
     process.stdout.write(chalk.yellow('Waiting for session.jsonl...') + '\n' + chalk.dim('(searching ~/.claude/projects/)') + '\n');
@@ -34,7 +34,9 @@ export function render(state: State, cols: number, rows: number, scrollOffset: n
 
   const hintLine = state.connectionStatus === 'frozen'
     ? chalk.yellow('  ❄  Stream frozen — last snapshot preserved. Press q to quit.')
-    : chalk.dim('  Press q to quit · j/k to scroll · r to refresh');
+    : (sessionCount !== undefined && sessionCount > 1)
+      ? chalk.dim(`  Tab to switch · Session ${sessionIndex}/${sessionCount} · j/k to scroll · q to quit`)
+      : chalk.dim('  Press q to quit · j/k to scroll · r to refresh');
 
   // Degrade: terminal too small for a split layout
   if (headerHeight >= rows) {

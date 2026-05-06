@@ -24,6 +24,25 @@ function statusBadge(status: State['connectionStatus']): string {
   }
 }
 
+const MODEL_LIMITS: Record<string, number> = {
+  'claude-opus-4':      200_000,
+  'claude-sonnet-4':    200_000,
+  'claude-haiku-4':     200_000,
+  'claude-3-5-sonnet':  200_000,
+  'claude-3-5-haiku':   200_000,
+  'claude-3-opus':      200_000,
+  'claude-3-sonnet':    200_000,
+  'claude-3-haiku':     200_000,
+};
+
+function modelContextLimit(model: string): number {
+  if (model.startsWith('claude-2')) return 100_000;
+  for (const prefix of Object.keys(MODEL_LIMITS)) {
+    if (model.startsWith(prefix)) return MODEL_LIMITS[prefix];
+  }
+  return 200_000;
+}
+
 function wrapPills(items: string[], sep: string, cols: number): string {
   const lines: string[] = [];
   let current = '';
@@ -45,11 +64,14 @@ function wrapPills(items: string[], sep: string, cols: number): string {
 }
 
 export function renderHeader(state: State, cols: number): string {
-  const sessionId = state.sessionId
-    ? state.sessionId.slice(0, 12) + '…'
-    : chalk.dim('—');
+  const sessionLabel = state.projectName && state.sessionId
+    ? chalk.bold(state.projectName) + chalk.dim(' · ') + state.sessionId.slice(0, 8)
+    : state.sessionId
+      ? state.sessionId.slice(0, 8)
+      : chalk.dim('—');
   const model   = state.model || chalk.dim('—');
-  const context = fmtNum(state.contextUsed);
+  const ctxPct  = Math.round(state.contextUsed / modelContextLimit(state.model) * 100);
+  const ctxColor = ctxPct >= 80 ? chalk.red : ctxPct >= 60 ? chalk.yellow : (s: string) => s;
   const uptime  = fmtMs(state.uptimeMs);
   const idle    = fmtMs(state.idleMs);
   const status  = statusBadge(state.connectionStatus);
@@ -61,13 +83,14 @@ export function renderHeader(state: State, cols: number): string {
   const outTok = fmtNum(state.outputTokens);
   const cacheR = fmtNum(state.cacheReadTokens);
 
-  const topItems = [status, sessionId, model, `ctx ${context}`];
+  const topItems = [sessionLabel, model, status];
   const botItems = [
     `up ${uptime}`,
     `idle ${idle}`,
     chalk.cyan(`in ${inTok}`),
     chalk.green(`out ${outTok}`),
     chalk.dim(`$cache ${cacheR}`),
+    ctxColor(`ctx ${ctxPct}%`),
     errors,
   ];
 
