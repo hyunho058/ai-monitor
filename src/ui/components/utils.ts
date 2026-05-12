@@ -3,7 +3,7 @@ import chalk from 'chalk';
 export function sectionTitle(label: string, cols: number): string {
   const usedWidth = 3 + label.length + 1;
   const trailing = Math.max(0, cols - usedWidth);
-  return chalk.yellow('── ') + chalk.bold.yellow(label) + chalk.yellow(' ' + '─'.repeat(trailing));
+  return chalk.gray('── ') + chalk.bold.gray(label) + chalk.gray(' ' + '─'.repeat(trailing));
 }
 
 export function sectionTitleDouble(label: string, cols: number): string {
@@ -13,10 +13,10 @@ export function sectionTitleDouble(label: string, cols: number): string {
   const labelPart = `═ ${label} `;
   const fillLen = Math.max(0, inner - labelPart.length - 1); // -1 for right ═ before ╗
   const fill = '═'.repeat(fillLen);
-  return '\n' + chalk.yellow('╔') + chalk.bold.yellow(labelPart) + chalk.yellow(fill + '═╗');
+  return '\n' + chalk.gray('╔') + chalk.bold.gray(labelPart) + chalk.gray(fill + '═╗');
 }
 
 export function sectionBottomDouble(cols: number): string {
   const fill = '═'.repeat(Math.max(0, cols - 2));
-  return chalk.yellow('╚' + fill + '╝');
+  return chalk.gray('╚' + fill + '╝');
 }

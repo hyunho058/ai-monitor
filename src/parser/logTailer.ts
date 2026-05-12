@@ -280,6 +280,7 @@ export class LogTailer implements ILogProvider {
           const skillName = '/' + match[1];
           this.state.recentSkills.unshift({ name: skillName, startTime: eventTime });
           if (this.state.recentSkills.length > 5) this.state.recentSkills.pop();
+          if (skillName === '/exit') this.state.exited = true;
         }
       }
     }

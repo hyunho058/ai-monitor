@@ -71,7 +71,7 @@ export function renderHeader(state: State, cols: number): string {
       : chalk.dim('—');
   const model   = state.model || chalk.dim('—');
   const ctxPct  = Math.round(state.contextUsed / modelContextLimit(state.model) * 100);
-  const ctxColor = ctxPct >= 80 ? chalk.red : ctxPct >= 60 ? chalk.yellow : (s: string) => s;
+  const ctxColor = ctxPct >= 80 ? chalk.red : ctxPct >= 50 ? chalk.yellow : chalk.green;
   const uptime  = fmtMs(state.uptimeMs);
   const idle    = fmtMs(state.idleMs);
   const status  = statusBadge(state.connectionStatus);
@@ -84,25 +84,28 @@ export function renderHeader(state: State, cols: number): string {
   const cacheR = fmtNum(state.cacheReadTokens);
 
   const topItems = [sessionLabel, model, status];
-  const botItems = [
+  const midItems = [
     `up ${uptime}`,
     `idle ${idle}`,
+    ctxColor(`context ${ctxPct}%`),
+    errors,
+  ];
+  const tokItems = [
     chalk.cyan(`in ${inTok}`),
     chalk.green(`out ${outTok}`),
     chalk.dim(`$cache ${cacheR}`),
-    ctxColor(`ctx ${ctxPct}%`),
-    errors,
   ];
 
   const sep1 = chalk.dim(' │ ');
   const sep2 = chalk.dim(' · ');
 
   const topLine = wrapPills(topItems, sep1, cols);
-  const botLine = wrapPills(botItems, sep2, cols);
+  const midLine = wrapPills(midItems, sep2, cols);
+  const tokLine = wrapPills(tokItems, sep2, cols);
 
   const label = cols < 80
     ? chalk.bold.cyan('ai-monitor')
     : chalk.bold.cyan('╔═ ai-monitor ═╗');
 
-  return label + '\n' + topLine + '\n' + botLine;
+  return label + '\n' + topLine + '\n' + midLine + '\n' + tokLine;
 }
