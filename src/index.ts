@@ -53,6 +53,34 @@ function syncSessionPool(): void {
   }
 }
 
+function removeExitedSessions(): void {
+  const exitedPaths: string[] = [];
+  for (const [p, tailer] of sessionPool) {
+    if (tailer.getState().exited) exitedPaths.push(p);
+  }
+  if (exitedPaths.length === 0) return;
+
+  const currentWasRemoved = currentSessionPath !== null && exitedPaths.includes(currentSessionPath);
+  const oldCurrentIdx = currentWasRemoved ? sortedSessionPaths.indexOf(currentSessionPath!) : -1;
+
+  for (const p of exitedPaths) {
+    const tailer = sessionPool.get(p);
+    if (!tailer) continue;
+    tailer.stop();
+    sessionPool.delete(p);
+    const idx = sortedSessionPaths.indexOf(p);
+    if (idx !== -1) sortedSessionPaths.splice(idx, 1);
+  }
+
+  if (sortedSessionPaths.length === 0) {
+    currentSessionPath = null;
+  } else if (currentWasRemoved) {
+    const nextIdx = oldCurrentIdx < sortedSessionPaths.length ? oldCurrentIdx : 0;
+    currentSessionPath = sortedSessionPaths[nextIdx];
+    scrollOffset = 0;
+  }
+}
+
 function getCurrentState(): State {
   if (!currentSessionPath) return WAITING_STATE;
   return sessionPool.get(currentSessionPath)?.getState() ?? WAITING_STATE;
@@ -143,6 +171,7 @@ function main(): void {
 
   const interval = setInterval(() => {
     syncSessionPool();
+    removeExitedSessions();
     cols = getCols();
     rows = getRows();
     const { index, count } = getSessionPosition();

@@ -57,6 +57,7 @@ export interface State {
   pendingQuestion: string | null;
   parseErrors: number;
   connectionStatus: 'connected' | 'waiting' | 'frozen';
+  exited?: boolean;
 }
 
 export interface ILogProvider {
