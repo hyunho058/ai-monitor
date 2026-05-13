@@ -61,27 +61,32 @@ export function renderAgentsBox(state: State, cols: number): string {
     const roots = buildTree(state.activeAgents);
     const flattened = flattenTree(roots);
 
+    const rawTypes = flattened.map(f => f.agent.subagentType ?? 'agent');
+    const maxTypeLen = rawTypes.reduce((m, t) => Math.max(m, t.length), 0);
+    const typeColWidth = Math.min(maxTypeLen, 20);
+
     for (const { agent, depth, isLast } of flattened) {
       let prefix = '  ';
       if (depth > 0) {
         prefix += '  '.repeat(depth - 1) + (isLast ? '└─ ' : '├─ ');
       }
 
-      const elapsed = fmtElapsed(agent.elapsedMs);
-      const rawName = agent.task || '(agent)';
+      const icon = agent.completed ? chalk.dim('◯') : chalk.green('●');
 
-      const reservedWidth = prefix.length + 10;
-      const nameWidth = Math.max(10, cols - reservedWidth);
-      const truncated = rawName.length > nameWidth ? rawName.slice(0, nameWidth - 1) + '…' : rawName;
+      const rawType = agent.subagentType ?? 'agent';
+      const typeStr = rawType.length > 20
+        ? rawType.slice(0, 19) + '…'
+        : rawType.padEnd(typeColWidth);
 
-      let nameStr = truncated;
-      if (agent.completed) {
-        nameStr = chalk.dim(nameStr);
-      } else {
-        nameStr = chalk.green(nameStr);
-      }
+      const rawDesc = agent.description ?? agent.task ?? '(agent)';
+      const elapsedStr = fmtElapsed(agent.elapsedMs);
+      const reservedWidth = prefix.length + 2 + typeColWidth + 2 + elapsedStr.length + 2;
+      const descWidth = Math.max(10, cols - reservedWidth);
+      const descStr = rawDesc.length > descWidth
+        ? rawDesc.slice(0, descWidth - 1) + '…'
+        : rawDesc;
 
-      lines.push(`${prefix}${nameStr} ${chalk.yellow(elapsed.padStart(8))}`);
+      lines.push(`${prefix}${icon} ${typeStr}  ${descStr.padEnd(descWidth)}  ${chalk.yellow(elapsedStr)}`);
     }
   }
 

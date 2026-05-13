@@ -1,6 +1,8 @@
 export interface ActiveAgent {
   id: string;
   task: string;
+  subagentType?: string;
+  description?: string;
   elapsedMs: number;
   startTime: number;
   parentId?: string;

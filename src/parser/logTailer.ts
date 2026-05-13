@@ -320,6 +320,10 @@ export class LogTailer implements ILogProvider {
         this.agents.set(id, {
           id,
           task,
+          subagentType: typeof input.subagent_type === 'string' ? input.subagent_type : undefined,
+          description: typeof input.description === 'string'
+            ? input.description
+            : typeof input.prompt === 'string' ? input.prompt : undefined,
           startTime: eventTime,
           elapsedMs: 0,
           completed: false,
