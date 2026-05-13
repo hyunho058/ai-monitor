@@ -17,8 +17,8 @@ function statusIcon(task: Task): string {
 }
 
 export function renderTasksBox(state: State, cols: number): string {
-  const maxDesc = Math.max(20, cols - 24);
-  const tasks = state.tasks;
+  const maxDesc = Math.max(20, cols - 12);
+  const tasks = [...state.tasks].sort((a, b) => b.startTime - a.startTime);
 
   const lines: string[] = [];
 
@@ -29,9 +29,9 @@ export function renderTasksBox(state: State, cols: number): string {
       const icon = statusIcon(task);
       const desc = task.description.length > maxDesc
         ? task.description.slice(0, maxDesc - 1) + '…'
-        : task.description.padEnd(maxDesc);
-      const dur = fmtDuration(task.durationMs).padStart(6);
-      const line = `  ${icon} ${chalk.dim(dur)}  ${task.status === 'active' ? desc : chalk.dim(desc)}`;
+        : task.description;
+      const dur = fmtDuration(task.durationMs);
+      const line = `  ${icon} ${task.status === 'active' ? desc : chalk.dim(desc)}  ${chalk.dim(dur)}`;
       lines.push(line);
     }
   }
