@@ -33,7 +33,7 @@ function buildTree(agents: ActiveAgent[]): TreeNode[] {
 
   // Sort by start time
   const sortFn = (a: TreeNode, b: TreeNode) => a.agent.startTime - b.agent.startTime;
-  roots.sort(sortFn);
+  roots.sort((a, b) => b.agent.startTime - a.agent.startTime);
   for (const node of map.values()) {
     node.children.sort(sortFn);
   }
