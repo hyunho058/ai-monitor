@@ -12,7 +12,7 @@ export function renderToolsBox(state: State, cols: number): string {
   const toolEntries = Object.entries(state.toolCounts).sort((a, b) => b[1] - a[1]);
   const lines: string[] = [];
 
-  lines.push(sectionTitleDouble('Tools Usage', cols));
+  lines.push(sectionTitleDouble('Tool Usage', cols));
   const inlineParts = toolEntries.map(([name, count]) => `${name.toLowerCase()}:${chalk.cyan(count)}`);
   const inlineStr = inlineParts.length > 0 ? inlineParts.join('  ') : chalk.dim('(no tool calls yet)');
   lines.push('  ' + inlineStr);

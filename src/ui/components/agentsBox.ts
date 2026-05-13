@@ -53,7 +53,7 @@ function flattenTree(nodes: TreeNode[], depth = 0): { agent: ActiveAgent; depth:
 
 export function renderAgentsBox(state: State, cols: number): string {
   const lines: string[] = [];
-  lines.push(sectionTitleDouble('Subagents', cols));
+  lines.push(sectionTitleDouble('Active Agents', cols));
 
   if (state.activeAgents.length === 0) {
     lines.push(chalk.dim('  (no active agents)'));

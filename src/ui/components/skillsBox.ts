@@ -37,5 +37,5 @@ export function renderSkillsBox(state: State, cols: number): string {
     }
   }
 
-  return sectionTitleDouble('Skill', cols) + '\n' + lines.join('\n') + '\n' + sectionBottomDouble(cols);
+  return sectionTitleDouble('Skills', cols) + '\n' + lines.join('\n') + '\n' + sectionBottomDouble(cols);
 }
