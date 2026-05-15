@@ -33,6 +33,10 @@ const MODEL_LIMITS: Record<string, number> = {
   'claude-3-opus':      200_000,
   'claude-3-sonnet':    200_000,
   'claude-3-haiku':     200_000,
+  'gemini-2.5-pro':     1_000_000,
+  'gemini-2.5-flash':   1_000_000,
+  'gemini-3-flash':     1_000_000,
+  'gemini-3-pro':       1_000_000,
 };
 
 function modelContextLimit(model: string): number {
@@ -69,8 +73,11 @@ export function renderHeader(state: State, cols: number): string {
     : state.sessionId
       ? state.sessionId.slice(0, 8)
       : chalk.dim('—');
-  const model   = state.model || chalk.dim('—');
-  const ctxPct  = Math.round(state.contextUsed / modelContextLimit(state.model) * 100);
+  const providerTag = state.provider === 'gemini'
+    ? chalk.yellow('[Gemini]')
+    : chalk.cyan('[Claude]');
+  const model = providerTag + ' ' + (state.model || chalk.dim('—'));
+  const ctxPct  = Math.round(state.contextUsed / modelContextLimit(state.model ?? '') * 100);
   const ctxColor = ctxPct >= 80 ? chalk.red : ctxPct >= 50 ? chalk.yellow : chalk.green;
   const uptime  = fmtMs(state.uptimeMs);
   const idle    = fmtMs(state.idleMs);
@@ -94,6 +101,9 @@ export function renderHeader(state: State, cols: number): string {
     chalk.cyan(`in ${inTok}`),
     chalk.green(`out ${outTok}`),
     chalk.dim(`$cache ${cacheR}`),
+    ...(state.provider === 'gemini' && (state.thoughtTokens ?? 0) > 0
+      ? [chalk.magenta('💭 ' + fmtNum(state.thoughtTokens ?? 0))]
+      : []),
   ];
 
   const sep1 = chalk.dim(' │ ');

@@ -1,5 +1,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
+import * as os from 'os';
 import { State, ILogProvider, ActiveAgent, FileActivity, Task } from '../types/state.js';
 import { findLatestSession } from './autoDetect.js';
 
@@ -45,6 +46,7 @@ export class LogTailer implements ILogProvider {
       outputTokens: 0,
       cacheReadTokens: 0,
       cacheCreationTokens: 0,
+      thoughtTokens: 0,
       toolCounts: {},
       activeAgents: [],
       recentTools: [],
@@ -54,6 +56,7 @@ export class LogTailer implements ILogProvider {
       pendingQuestion: null,
       parseErrors: 0,
       connectionStatus: 'waiting',
+      provider: 'claude',
     };
   }
 
@@ -443,6 +446,15 @@ function extractFilePath(toolName: string, input: Record<string, unknown>): stri
 
 function deriveProjectName(filePath: string): string {
   const dirName = path.basename(path.dirname(filePath));
+  // Claude encodes project paths as: -Users-<username>-<parentDir>-<project-name>
+  // Strip the home directory prefix (e.g. /Users/hyunhokim → -Users-hyunhokim),
+  // then skip the next segment (parent dir), returning the rest as the project name.
+  const homeEncoded = os.homedir().replace(/\//g, '-');
+  if (dirName.startsWith(homeEncoded + '-')) {
+    const afterHome = dirName.slice(homeEncoded.length + 1); // "IdeaProjects-ai-monitor"
+    const sep = afterHome.indexOf('-');
+    return sep !== -1 ? afterHome.slice(sep + 1) : afterHome;
+  }
   const parts = dirName.split('-').filter(p => p.length > 0);
   return parts[parts.length - 1] ?? dirName;
 }

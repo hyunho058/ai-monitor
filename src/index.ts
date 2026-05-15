@@ -1,8 +1,9 @@
 import * as readline from 'readline';
 import { LogTailer } from './parser/logTailer.js';
+import { GeminiLogTailer } from './parser/geminiLogTailer.js';
 import { findAllSessions } from './parser/autoDetect.js';
 import { render } from './ui/renderer.js';
-import { State } from './types/state.js';
+import { State, ILogProvider } from './types/state.js';
 
 const RENDER_INTERVAL_MS = 2000;
 
@@ -15,7 +16,9 @@ function getRows(): number {
 }
 
 let scrollOffset = 0;
-const sessionPool = new Map<string, LogTailer>();
+const sessionPool = new Map<string, ILogProvider>();
+const sessionProviders = new Map<string, 'claude' | 'gemini'>();
+let activeFilter: 'claude' | 'gemini' | null = null;
 let currentSessionPath: string | null = null;
 let sortedSessionPaths: string[] = [];
 
@@ -24,6 +27,7 @@ const WAITING_STATE: State = {
   totalTokens: 0, inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheCreationTokens: 0,
   toolCounts: {}, activeAgents: [], recentTools: [], recentSkills: [], fileActivities: [],
   tasks: [], pendingQuestion: null, parseErrors: 0, connectionStatus: 'waiting',
+  thoughtTokens: 0, provider: 'claude',
 };
 
 function syncSessionPool(): void {
@@ -33,16 +37,20 @@ function syncSessionPool(): void {
 
   for (const session of sessions) {
     if (!sessionPool.has(session.path)) {
-      const tailer = new LogTailer(session.path);
+      const tailer: ILogProvider = session.provider === 'gemini'
+        ? new GeminiLogTailer(session.path)
+        : new LogTailer(session.path);
       tailer.start();
       sessionPool.set(session.path, tailer);
     }
+    sessionProviders.set(session.path, session.provider);
   }
 
   for (const [p, tailer] of sessionPool) {
     if (!activePaths.has(p)) {
       tailer.stop();
       sessionPool.delete(p);
+      sessionProviders.delete(p);
     }
   }
 
@@ -68,6 +76,7 @@ function removeExitedSessions(): void {
     if (!tailer) continue;
     tailer.stop();
     sessionPool.delete(p);
+    sessionProviders.delete(p);
     const idx = sortedSessionPaths.indexOf(p);
     if (idx !== -1) sortedSessionPaths.splice(idx, 1);
   }
@@ -86,9 +95,15 @@ function getCurrentState(): State {
   return sessionPool.get(currentSessionPath)?.getState() ?? WAITING_STATE;
 }
 
+function getFilteredPaths(): string[] {
+  if (activeFilter === null) return sortedSessionPaths;
+  return sortedSessionPaths.filter(p => sessionProviders.get(p) === activeFilter);
+}
+
 function getSessionPosition(): { index: number; count: number } {
-  const count = sortedSessionPaths.length;
-  const idx = currentSessionPath ? sortedSessionPaths.indexOf(currentSessionPath) : -1;
+  const filtered = getFilteredPaths();
+  const count = filtered.length;
+  const idx = currentSessionPath ? filtered.indexOf(currentSessionPath) : -1;
   return { index: idx + 1, count };
 }
 
@@ -193,11 +208,29 @@ function main(): void {
       }
 
       if (key.name === 'tab') {
-        if (sortedSessionPaths.length <= 1) return;
-        const currentIndex = currentSessionPath ? sortedSessionPaths.indexOf(currentSessionPath) : 0;
-        const nextIndex = (currentIndex + 1) % sortedSessionPaths.length;
-        currentSessionPath = sortedSessionPaths[nextIndex];
+        const filtered = getFilteredPaths();
+        if (filtered.length <= 1) return;
+        const currentIndex = currentSessionPath ? filtered.indexOf(currentSessionPath) : 0;
+        const nextIndex = (currentIndex + 1) % filtered.length;
+        currentSessionPath = filtered[nextIndex];
         scrollOffset = 0;
+        const { index, count } = getSessionPosition();
+        scrollOffset = render(getCurrentState(), cols, rows, scrollOffset, index, count);
+      }
+
+      if (key.name === 'c' || key.name === 'g') {
+        const target = key.name === 'c' ? 'claude' : 'gemini';
+
+        if (activeFilter === target) {
+          activeFilter = null;
+        } else {
+          activeFilter = target;
+          const filtered = getFilteredPaths();
+          if (filtered.length > 0 && (!currentSessionPath || !filtered.includes(currentSessionPath))) {
+            currentSessionPath = filtered[0];
+            scrollOffset = 0;
+          }
+        }
         const { index, count } = getSessionPosition();
         scrollOffset = render(getCurrentState(), cols, rows, scrollOffset, index, count);
       }
