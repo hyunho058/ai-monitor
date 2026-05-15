@@ -50,6 +50,7 @@ export interface State {
   outputTokens: number;
   cacheReadTokens: number;
   cacheCreationTokens: number;
+  thoughtTokens: number;
   toolCounts: Record<string, number>;
   activeAgents: ActiveAgent[];
   recentTools: RecentTool[];
@@ -59,6 +60,7 @@ export interface State {
   pendingQuestion: string | null;
   parseErrors: number;
   connectionStatus: 'connected' | 'waiting' | 'frozen';
+  provider: 'claude' | 'gemini';
   exited?: boolean;
 }
 
