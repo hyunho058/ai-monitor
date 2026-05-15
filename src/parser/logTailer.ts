@@ -280,10 +280,10 @@ export class LogTailer implements ILogProvider {
       if (typeof msg.content === 'string') {
         const match = msg.content.match(/<command-name>\/([^<]+)<\/command-name>/);
         if (match) {
-          const skillName = '/' + match[1];
+          const skillName = match[1];
           this.state.recentSkills.unshift({ name: skillName, startTime: eventTime });
           if (this.state.recentSkills.length > 5) this.state.recentSkills.pop();
-          if (skillName === '/exit') this.state.exited = true;
+          if (skillName === 'exit') this.state.exited = true;
         }
       }
     }
@@ -376,10 +376,12 @@ export class LogTailer implements ILogProvider {
       if (pending.name === 'AskUserQuestion') {
         this.state.pendingQuestion = null;
       } else if (pending.name === 'Skill') {
-        this.state.recentSkills.unshift({
-          name: pending.skillName ?? '(skill)',
-          startTime: pending.startTime,
-        });
+        const skillName = pending.skillName ?? '(skill)';
+        const dedupWindowMs = 10_000;
+        this.state.recentSkills = this.state.recentSkills.filter(
+          s => !(s.name === skillName && eventTime - s.startTime < dedupWindowMs)
+        );
+        this.state.recentSkills.unshift({ name: skillName, startTime: pending.startTime });
         if (this.state.recentSkills.length > 5) this.state.recentSkills.pop();
       } else if (pending.toolType === 'file') {
         const activity = this.pendingFileActivities.get(toolUseId);
