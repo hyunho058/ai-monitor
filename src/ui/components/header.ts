@@ -81,7 +81,10 @@ export function renderHeader(state: State, cols: number): string {
   const ctxColor = ctxPct >= 80 ? chalk.red : ctxPct >= 50 ? chalk.yellow : chalk.green;
   const uptime  = fmtMs(state.uptimeMs);
   const idle    = fmtMs(state.idleMs);
-  const status  = statusBadge(state.connectionStatus);
+  // Input-wait takes precedence over the connection badge (incl. FROZEN): the user is the blocker.
+  const status  = state.inputWait
+    ? chalk.magenta.bold('⏳ INPUT NEEDED')
+    : statusBadge(state.connectionStatus);
   const errors  = state.parseErrors > 0
     ? chalk.red(`ERR: ${state.parseErrors}`)
     : chalk.dim('ERR: 0');
