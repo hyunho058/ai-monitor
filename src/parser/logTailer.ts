@@ -1,13 +1,18 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
-import { State, ILogProvider, ActiveAgent, FileActivity, Task } from '../types/state.js';
+import { State, ILogProvider, ActiveAgent, FileActivity, Task, InputWait } from '../types/state.js';
 import { findLatestSession } from './autoDetect.js';
 
 type JsonEvent = Record<string, unknown>;
 
 // If no new bytes arrive within this window after fully reading a file, switch to FROZEN.
 const FROZEN_IDLE_MS = 10_000;
+
+// A permission-class tool that stays pending with no new bytes for this long is treated
+// as blocked on a user approval prompt (not a normal in-flight tool). Shorter than
+// FROZEN_IDLE_MS so the indicator appears before the session reads as merely frozen.
+const INPUT_WAIT_QUIET_MS = 3_000;
 
 export class LogTailer implements ILogProvider {
   private state: State;
@@ -54,6 +59,7 @@ export class LogTailer implements ILogProvider {
       fileActivities: [],
       tasks: [],
       pendingQuestion: null,
+      inputWait: null,
       parseErrors: 0,
       connectionStatus: 'waiting',
       provider: 'claude',
@@ -96,7 +102,34 @@ export class LogTailer implements ILogProvider {
       idleMs: this.lastEventTime ? Math.max(0, now - this.lastEventTime) : 0,
       activeAgents,
       tasks,
+      inputWait: this.computeInputWait(now),
     };
+  }
+
+  // Derive whether the session is blocked awaiting a user decision. Time-relative, so it
+  // is computed per-getState() rather than set once during polling.
+  private computeInputWait(now: number): InputWait | null {
+    // An AskUserQuestion prompt is always an active request — surface it immediately.
+    if (this.state.pendingQuestion) {
+      return { kind: 'question', label: this.state.pendingQuestion };
+    }
+    // A permission prompt leaves a permission-class tool_use with no tool_result. Only
+    // treat it as "waiting" once the stream has been quiet long enough to rule out a
+    // normal in-flight tool (anti-flap).
+    if (
+      this.lastNewBytesTime !== null &&
+      now - this.lastNewBytesTime >= INPUT_WAIT_QUIET_MS
+    ) {
+      let latest: { name: string; startTime: number } | null = null;
+      for (const pending of this.allPendingTools.values()) {
+        if (!requiresPermission(pending.name)) continue;
+        if (!latest || pending.startTime > latest.startTime) {
+          latest = { name: pending.name, startTime: pending.startTime };
+        }
+      }
+      if (latest) return { kind: 'permission', label: latest.name };
+    }
+    return null;
   }
 
   getCurrentFile(): string | null {
@@ -432,6 +465,17 @@ function classifyTool(name: string): 'agent' | 'skill' | 'file' {
   if (name === 'Skill') return 'skill';
   if (name in FILE_TOOLS) return 'file';
   return 'skill';
+}
+
+// Tools that trigger Claude Code's approval dialog in default permission mode. A pending
+// one (no tool_result) signals the session may be blocked awaiting the user's decision.
+// Agent (autonomous, shown in Active Agents) and read-only Read/Grep/Glob are excluded.
+const PERMISSION_TOOLS = new Set([
+  'Edit', 'Write', 'MultiEdit', 'NotebookEdit', 'Bash', 'WebFetch',
+]);
+
+function requiresPermission(name: string): boolean {
+  return PERMISSION_TOOLS.has(name);
 }
 
 function fileOperation(name: string): FileActivity['operation'] {

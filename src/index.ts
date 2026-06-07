@@ -26,7 +26,7 @@ const WAITING_STATE: State = {
   sessionId: '', projectName: '', model: '', contextUsed: 0, uptimeMs: 0, idleMs: 0,
   totalTokens: 0, inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheCreationTokens: 0,
   toolCounts: {}, activeAgents: [], recentTools: [], recentSkills: [], fileActivities: [],
-  tasks: [], pendingQuestion: null, parseErrors: 0, connectionStatus: 'waiting',
+  tasks: [], pendingQuestion: null, inputWait: null, parseErrors: 0, connectionStatus: 'waiting',
   thoughtTokens: 0, provider: 'claude',
 };
 

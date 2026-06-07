@@ -19,12 +19,16 @@ export function render(state: State, cols: number, rows: number, scrollOffset: n
   const header = renderHeader(state, cols);
   const headerHeight = header.split('\n').length;
 
-  const questionBanner = state.pendingQuestion
-    ? chalk.bgYellow.black.bold(' ? WAITING FOR INPUT ') + ' ' + chalk.yellow(state.pendingQuestion)
+  const inputBanner = state.inputWait
+    ? chalk.bgYellow.black.bold(' ⏳ WAITING FOR INPUT ') + ' ' + chalk.yellow(
+        state.inputWait.kind === 'permission'
+          ? `${state.inputWait.label} — approval needed`
+          : state.inputWait.label
+      )
     : null;
 
   const bodyParts: string[] = [
-    ...(questionBanner ? [questionBanner] : []),
+    ...(inputBanner ? [inputBanner] : []),
     renderTasksBox(state, cols),
     renderAgentsBox(state, cols),
     renderSkillsBox(state, cols),
@@ -32,7 +36,9 @@ export function render(state: State, cols: number, rows: number, scrollOffset: n
     renderFileActivityBox(state, cols),
   ];
 
-  const hintLine = state.connectionStatus === 'frozen'
+  const hintLine = state.inputWait
+    ? chalk.magenta('  ⏳ Waiting for your input — respond in the session. Press q to quit.')
+    : state.connectionStatus === 'frozen'
     ? chalk.yellow('  ❄  Stream frozen — last snapshot preserved. Press q to quit.')
     : (sessionCount !== undefined && sessionCount > 1)
       ? chalk.dim(`  Tab to switch · Session ${sessionIndex}/${sessionCount} · j/k to scroll · q to quit`)

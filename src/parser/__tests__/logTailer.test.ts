@@ -247,6 +247,101 @@ describe('LogTailer', () => {
 
   });
 
+  describe('inputWait', () => {
+
+    // computeInputWait measures the quiet window from lastNewBytesTime, which is set during
+    // real file polling. These tests drive parseLine directly, so simulate the window.
+    function setQuietMs(tailer: LogTailer, ms: number): void {
+      (tailer as any).lastNewBytesTime = Date.now() - ms;
+    }
+
+    it('flags a permission-class pending tool after the quiet window (R1.1)', () => {
+      // given
+      const tailer = new LogTailer();
+      parse(tailer, assistantToolUse('id-1', 'Edit', { file_path: '/a.ts' }, T0));
+
+      // when
+      setQuietMs(tailer, 4000);
+
+      // then
+      expect(tailer.getState().inputWait).toEqual({ kind: 'permission', label: 'Edit' });
+    });
+
+    it('does not flag before the quiet window elapses (R1.5 anti-flap)', () => {
+      // given
+      const tailer = new LogTailer();
+      parse(tailer, assistantToolUse('id-1', 'Edit', { file_path: '/a.ts' }, T0));
+
+      // when
+      setQuietMs(tailer, 500);
+
+      // then
+      expect(tailer.getState().inputWait).toBeNull();
+    });
+
+    it('flags Bash as a permission prompt (R2.1)', () => {
+      // given
+      const tailer = new LogTailer();
+      parse(tailer, assistantToolUse('id-1', 'Bash', { command: 'ls' }, T0));
+
+      // when
+      setQuietMs(tailer, 4000);
+
+      // then
+      expect(tailer.getState().inputWait).toEqual({ kind: 'permission', label: 'Bash' });
+    });
+
+    it('does not flag a pending Agent even when the stream is quiet (R1.4 / R2.2)', () => {
+      // given
+      const tailer = new LogTailer();
+      parse(tailer, assistantToolUse('ag-1', 'Agent', { subagent_type: 'Explore' }, T0));
+
+      // when
+      setQuietMs(tailer, 4000);
+
+      // then
+      expect(tailer.getState().inputWait).toBeNull();
+    });
+
+    it('does not flag a pending read-only Read tool (R2.2)', () => {
+      // given
+      const tailer = new LogTailer();
+      parse(tailer, assistantToolUse('id-1', 'Read', { file_path: '/a.ts' }, T0));
+
+      // when
+      setQuietMs(tailer, 4000);
+
+      // then
+      expect(tailer.getState().inputWait).toBeNull();
+    });
+
+    it('clears inputWait once the permission tool_result arrives (R1.3)', () => {
+      // given
+      const tailer = new LogTailer();
+      parse(tailer, assistantToolUse('id-1', 'Edit', { file_path: '/a.ts' }, T0));
+      setQuietMs(tailer, 4000);
+      expect(tailer.getState().inputWait).not.toBeNull();
+
+      // when
+      parse(tailer, userToolResult('id-1', false, T4s));
+
+      // then
+      expect(tailer.getState().inputWait).toBeNull();
+    });
+
+    it('surfaces AskUserQuestion as inputWait(question) immediately, no quiet wait (R1.2)', () => {
+      // given
+      const tailer = new LogTailer();
+
+      // when
+      parse(tailer, assistantToolUse('id-1', 'AskUserQuestion', { question: 'Which option?' }, T0));
+
+      // then
+      expect(tailer.getState().inputWait).toEqual({ kind: 'question', label: 'Which option?' });
+    });
+
+  });
+
   describe('parseErrors', () => {
 
     it('increments parseErrors when an invalid JSON line is received', () => {

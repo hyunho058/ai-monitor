@@ -38,6 +38,13 @@ export interface Task {
   durationMs?: number;
 }
 
+export interface InputWait {
+  // 'question' = AskUserQuestion prompt; 'permission' = tool approval dialog
+  kind: 'question' | 'permission';
+  // For 'question': the question text. For 'permission': the blocking tool name.
+  label: string;
+}
+
 export interface State {
   sessionId: string;
   projectName: string;
@@ -58,6 +65,7 @@ export interface State {
   fileActivities: FileActivity[];
   tasks: Task[];
   pendingQuestion: string | null;
+  inputWait: InputWait | null;
   parseErrors: number;
   connectionStatus: 'connected' | 'waiting' | 'frozen';
   provider: 'claude' | 'gemini';

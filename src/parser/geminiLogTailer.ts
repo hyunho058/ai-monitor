@@ -104,6 +104,7 @@ function makeInitialState(filePath: string): State {
     fileActivities:      [],
     tasks:               [],
     pendingQuestion:     null,
+    inputWait:           null,
     parseErrors:         0,
     connectionStatus:    'waiting',
     provider:            'gemini',
