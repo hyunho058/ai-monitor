@@ -1,4 +1,15 @@
 {
+  "extraKnownMarketplaces": {
+    "harness-ops-marketplace": {
+      "source": {
+        "source": "github",
+        "repo": "hyunho058/harness-ops"
+      }
+    }
+  },
+  "enabledPlugins": {
+    "harness-ops@harness-ops-marketplace": true
+  },
   "hooks": {
     "PreToolUse": [
       {
